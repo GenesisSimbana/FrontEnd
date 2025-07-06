@@ -46,6 +46,7 @@ export const ROUTES = {
   CONTRACTS: '/contracts',
   SETTINGS: '/settings',
   NOT_FOUND: '/404',
+  CONCESIONARIOS: '/concesionarios',
 } as const;
 
 // Validation

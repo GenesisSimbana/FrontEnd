@@ -5,9 +5,15 @@ import { useApi } from '../../hooks/useApi';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import type { Vehicle, VehicleType, VehicleCategory } from '../../types/automotive-loan';
+import { getConcesionariosByEstado, getVehiculosByRuc, createVehiculo, createIdentificadorVehiculo, updateVehiculo, desactivarVehiculo } from '../../services/concesionarioService';
+import Modal from '../../components/ui/Modal';
+import IdentificadoresModal from '../concesionarios/IdentificadoresModal';
 
 const VehiclesPage: React.FC = () => {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [allVehicles, setAllVehicles] = useState<any[]>([]);
+  const [concesionarios, setConcesionarios] = useState<{ ruc: string; razonSocial: string }[]>([]);
+  const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
     make: '',
@@ -17,38 +23,92 @@ const VehiclesPage: React.FC = () => {
     priceTo: '',
     yearFrom: '',
     yearTo: '',
+    concesionario: '',
   });
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
-  const {
-    loading,
-    execute: fetchVehicles
-  } = useApi(vehicleService.getVehicles, {
-    onSuccess: (data) => {
-      setVehicles(data.data);
-      setTotalPages(data.totalPages);
-    }
+  const pageSize = 12;
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState<any>({
+    marca: '',
+    modelo: '',
+    cilindraje: '',
+    anio: '',
+    valor: '',
+    color: '',
+    extras: '',
+    estado: '',
+    tipo: '',
+    combustible: '',
+    condicion: '',
+    placa: '',
+    chasis: '',
+    motor: '',
+    concesionario: '',
   });
+  const [saving, setSaving] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [detailsVehicle, setDetailsVehicle] = useState<any>(null);
+  const [showIdentificadorModal, setShowIdentificadorModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [vehicleToEdit, setVehicleToEdit] = useState<any>(null);
+  const [deactivating, setDeactivating] = useState(false);
+  const [errors, setErrors] = useState<any>({});
 
   useEffect(() => {
-    loadVehicles();
-  }, [page]);
+    loadAllVehicles();
+  }, []);
 
-  const loadVehicles = () => {
-    const params = {
-      page,
-      pageSize: 12,
-      ...(filters.search && { search: filters.search }),
-      ...(filters.make && { make: filters.make }),
-      ...(filters.type && { type: filters.type }),
-      ...(filters.category && { category: filters.category }),
-      ...(filters.priceFrom && { priceFrom: parseInt(filters.priceFrom) }),
-      ...(filters.priceTo && { priceTo: parseInt(filters.priceTo) }),
-      ...(filters.yearFrom && { yearFrom: parseInt(filters.yearFrom) }),
-      ...(filters.yearTo && { yearTo: parseInt(filters.yearTo) }),
-    };
-    fetchVehicles(params);
+  useEffect(() => {
+    applyFilters();
+  }, [allVehicles, filters, page]);
+
+  const loadAllVehicles = async () => {
+    setLoading(true);
+    try {
+      const concesionariosData = await getConcesionariosByEstado('ACTIVO');
+      setConcesionarios(concesionariosData.map((c: any) => ({ ruc: c.ruc, razonSocial: c.razonSocial })));
+      let allVehs: any[] = [];
+      for (const c of concesionariosData) {
+        const vehs = await getVehiculosByRuc(c.ruc);
+        allVehs = allVehs.concat(vehs.map((v: any) => ({
+          ...v,
+          make: v.marca || '',
+          model: v.modelo || '',
+          year: v.anio || '',
+          price: v.valor || 0,
+          type: v.tipo || '',
+          category: v.condicion || '',
+          fuelType: v.combustible || '',
+          isAvailable: v.estado === 'ACTIVO' || v.estado === 'DISPONIBLE',
+          placa: v.identificadorVehiculo?.placa || '',
+          chasis: v.identificadorVehiculo?.chasis || '',
+          motor: v.identificadorVehiculo?.motor || '',
+          concesionario: c.ruc
+        })));
+      }
+      setAllVehicles(allVehs);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyFilters = () => {
+    let filtered = [...allVehicles];
+    if (filters.concesionario) filtered = filtered.filter(v => v.concesionario === filters.concesionario);
+    if (filters.make) filtered = filtered.filter(v => v.make?.toLowerCase().includes(filters.make.toLowerCase()));
+    if (filters.type) filtered = filtered.filter(v => v.tipo === filters.type);
+    if (filters.category) filtered = filtered.filter(v => v.condicion === filters.category);
+    if (filters.priceFrom) filtered = filtered.filter(v => v.price >= parseInt(filters.priceFrom));
+    if (filters.priceTo) filtered = filtered.filter(v => v.price <= parseInt(filters.priceTo));
+    if (filters.yearFrom) filtered = filtered.filter(v => v.year >= parseInt(filters.yearFrom));
+    if (filters.yearTo) filtered = filtered.filter(v => v.year <= parseInt(filters.yearTo));
+    if (filters.search) filtered = filtered.filter(v =>
+      v.make?.toLowerCase().includes(filters.search.toLowerCase()) ||
+      v.model?.toLowerCase().includes(filters.search.toLowerCase())
+    );
+    setTotalPages(Math.max(1, Math.ceil(filtered.length / pageSize)));
+    setVehicles(filtered.slice((page - 1) * pageSize, page * pageSize));
   };
 
   const handleFilterChange = (field: string, value: string) => {
@@ -58,7 +118,7 @@ const VehiclesPage: React.FC = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
-    loadVehicles();
+    applyFilters();
   };
 
   const clearFilters = () => {
@@ -71,6 +131,7 @@ const VehiclesPage: React.FC = () => {
       priceTo: '',
       yearFrom: '',
       yearTo: '',
+      concesionario: '',
     });
     setPage(1);
   };
@@ -127,14 +188,165 @@ const VehiclesPage: React.FC = () => {
     );
   };
 
+  const handleOpenForm = () => {
+    setForm({
+      marca: '', modelo: '', cilindraje: '', anio: '', valor: '', color: '', extras: '', estado: '', tipo: '', combustible: '', condicion: '', placa: '', chasis: '', motor: '', concesionario: ''
+    });
+    setIsEditing(false);
+    setVehicleToEdit(null);
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setErrors({});
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+  };
+
+  const validate = () => {
+    const newErrors: any = {};
+    if (!form.marca || form.marca.trim() === '') newErrors.marca = 'La marca es requerida';
+    else if (form.marca.length > 40) newErrors.marca = 'Máximo 40 caracteres';
+    if (!form.modelo || form.modelo.trim() === '') newErrors.modelo = 'El modelo es requerido';
+    else if (form.modelo.length > 40) newErrors.modelo = 'Máximo 40 caracteres';
+    if (!form.cilindraje || isNaN(Number(form.cilindraje))) newErrors.cilindraje = 'El cilindraje es requerido y debe ser numérico';
+    if (!form.anio || isNaN(Number(form.anio))) newErrors.anio = 'El año es requerido y debe ser numérico';
+    else if (Number(form.anio) < 1900) newErrors.anio = 'El año debe ser mayor a 1900';
+    else if (Number(form.anio) > 2030) newErrors.anio = 'El año no puede ser mayor a 2030';
+    if (!form.valor || isNaN(Number(form.valor))) newErrors.valor = 'El valor es requerido y debe ser numérico';
+    else if (Number(form.valor) < 0) newErrors.valor = 'El valor no puede ser negativo';
+    else if (Number(form.valor) > 99999999.99) newErrors.valor = 'El valor excede el límite permitido';
+    if (!form.color || form.color.trim() === '') newErrors.color = 'El color es requerido';
+    else if (form.color.length > 30) newErrors.color = 'Máximo 30 caracteres';
+    if (form.extras && form.extras.length > 150) newErrors.extras = 'Máximo 150 caracteres';
+    if (!form.estado) newErrors.estado = 'El estado es requerido';
+    if (!form.tipo) newErrors.tipo = 'El tipo es requerido';
+    if (!form.combustible) newErrors.combustible = 'El combustible es requerido';
+    if (!form.condicion) newErrors.condicion = 'La condición es requerida';
+    if (!form.placa || form.placa.trim() === '') newErrors.placa = 'La placa es requerida';
+    else if (form.placa.length > 7) newErrors.placa = 'La placa no puede exceder 7 caracteres';
+    if (!form.chasis || form.chasis.trim() === '') newErrors.chasis = 'El chasis es requerido';
+    else if (form.chasis.length !== 17) newErrors.chasis = 'El chasis debe tener exactamente 17 caracteres';
+    if (!form.motor || form.motor.trim() === '') newErrors.motor = 'El número de motor es requerido';
+    else if (form.motor.length > 20) newErrors.motor = 'El número de motor no puede exceder 20 caracteres';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    try {
+      await createIdentificadorVehiculo({
+        placa: form.placa,
+        chasis: form.chasis,
+        motor: form.motor
+      });
+      await createVehiculo(form.concesionario, {
+        marca: form.marca,
+        modelo: form.modelo,
+        cilindraje: parseFloat(form.cilindraje),
+        anio: form.anio,
+        valor: parseFloat(form.valor),
+        color: form.color,
+        extras: form.extras,
+        estado: form.estado,
+        tipo: form.tipo,
+        combustible: form.combustible,
+        condicion: form.condicion,
+        placa: form.placa
+      });
+      setShowForm(false);
+      loadAllVehicles();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleShowDetails = (vehicle: any) => {
+    setDetailsVehicle(vehicle);
+    setShowDetails(true);
+  };
+
+  const handleCloseDetails = () => {
+    setShowDetails(false);
+    setDetailsVehicle(null);
+  };
+
+  const handleOpenIdentificadorModal = () => {
+    setShowIdentificadorModal(true);
+  };
+
+  const handleCloseIdentificadorModal = () => {
+    setShowIdentificadorModal(false);
+  };
+
+  const handleEditFromDetails = () => {
+    if (detailsVehicle) {
+      setForm({
+        ...detailsVehicle,
+        concesionario: detailsVehicle.concesionario,
+        placa: detailsVehicle.placa,
+        chasis: detailsVehicle.chasis,
+        motor: detailsVehicle.motor
+      });
+      setVehicleToEdit(detailsVehicle);
+      setIsEditing(true);
+      setShowDetails(false);
+      setShowForm(true);
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!vehicleToEdit) return;
+    setSaving(true);
+    try {
+      await updateVehiculo(form.concesionario, form.placa, {
+        marca: form.marca,
+        modelo: form.modelo,
+        cilindraje: parseFloat(form.cilindraje),
+        anio: form.anio,
+        valor: parseFloat(form.valor),
+        color: form.color,
+        extras: form.extras,
+        estado: form.estado,
+        tipo: form.tipo,
+        combustible: form.combustible,
+        condicion: form.condicion,
+        placa: form.placa
+      });
+      setShowForm(false);
+      setIsEditing(false);
+      setVehicleToEdit(null);
+      loadAllVehicles();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeactivate = async () => {
+    if (!detailsVehicle) return;
+    setDeactivating(true);
+    try {
+      await desactivarVehiculo(detailsVehicle.concesionario, detailsVehicle.placa);
+      setShowDetails(false);
+      loadAllVehicles();
+    } finally {
+      setDeactivating(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Catálogo de Vehículos</h1>
-        <Button>
-          Agregar Vehículo
-        </Button>
+        <Button onClick={handleOpenForm}>Agregar Vehículo</Button>
       </div>
 
       {/* Filters */}
@@ -153,11 +365,10 @@ const VehiclesPage: React.FC = () => {
               onChange={(e) => handleFilterChange('type', e.target.value)}
             >
               <option value="">Todos los tipos</option>
-              <option value="CAR">Automóvil</option>
+              <option value="AUTOMOVIL">Automóvil</option>
+              <option value="CAMIONETA">Camioneta</option>
               <option value="SUV">SUV</option>
-              <option value="TRUCK">Camioneta</option>
-              <option value="MOTORCYCLE">Motocicleta</option>
-              <option value="VAN">Van</option>
+              <option value="SEDAN">Sedan</option>
             </select>
 
             <select
@@ -166,9 +377,8 @@ const VehiclesPage: React.FC = () => {
               onChange={(e) => handleFilterChange('category', e.target.value)}
             >
               <option value="">Todas las categorías</option>
-              <option value="NEW">Nuevo</option>
-              <option value="USED">Usado</option>
-              <option value="CERTIFIED">Certificado</option>
+              <option value="NUEVO">Nuevo</option>
+              <option value="USADO">Usado</option>
             </select>
 
             <Input
@@ -184,6 +394,17 @@ const VehiclesPage: React.FC = () => {
               value={filters.yearTo}
               onChange={(e) => handleFilterChange('yearTo', e.target.value)}
             />
+
+            <select
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={filters.concesionario}
+              onChange={(e) => handleFilterChange('concesionario', e.target.value)}
+            >
+              <option value="">Todos los concesionarios</option>
+              {concesionarios.map((c) => (
+                <option key={c.ruc} value={c.ruc}>{c.razonSocial}</option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -267,19 +488,14 @@ const VehiclesPage: React.FC = () => {
                   </div>
 
                   <div className="text-sm text-gray-600 mb-4">
-                    <p>Motor: {vehicle.engine}</p>
+                    <p>Motor: {vehicle.motor}</p>
                     <p>Transmisión: {vehicle.transmission === 'MANUAL' ? 'Manual' : 'Automática'}</p>
                     <p>Combustible: {vehicle.fuelType}</p>
                     <p>Puertas: {vehicle.doors}</p>
                   </div>
 
                   <div className="flex space-x-2">
-                    <Link
-                      to={`/vehicles/${vehicle.id}`}
-                      className="flex-1 bg-blue-600 text-white text-center py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-                    >
-                      Ver Detalles
-                    </Link>
+                    <Button onClick={() => handleShowDetails(vehicle)} className="mr-2">Ver Detalles</Button>
                     <Link
                       to={`/credit-simulation?vehicleId=${vehicle.id}`}
                       className="flex-1 bg-green-600 text-white text-center py-2 px-4 rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
@@ -320,6 +536,105 @@ const VehiclesPage: React.FC = () => {
           )}
         </>
       )}
+
+      <Modal isOpen={showForm} onClose={handleCloseForm} title={isEditing ? "Editar Vehículo" : "Agregar Vehículo"}>
+        <div className="space-y-4">
+          <select name="concesionario" value={form.concesionario} onChange={handleChange} className="w-full border rounded px-2 py-1">
+            <option value="">Selecciona un concesionario</option>
+            {concesionarios.map(c => <option key={c.ruc} value={c.ruc}>{c.razonSocial}</option>)}
+          </select>
+          <Input name="marca" label="Marca" value={form.marca} onChange={handleChange} />
+          {errors.marca && <div className="text-red-500 text-xs">{errors.marca}</div>}
+          <Input name="modelo" label="Modelo" value={form.modelo} onChange={handleChange} />
+          {errors.modelo && <div className="text-red-500 text-xs">{errors.modelo}</div>}
+          <Input name="cilindraje" label="Cilindraje" type="number" value={form.cilindraje} onChange={handleChange} />
+          {errors.cilindraje && <div className="text-red-500 text-xs">{errors.cilindraje}</div>}
+          <Input name="anio" label="Año" value={form.anio} onChange={handleChange} />
+          {errors.anio && <div className="text-red-500 text-xs">{errors.anio}</div>}
+          <Input name="valor" label="Valor" type="number" value={form.valor} onChange={handleChange} />
+          {errors.valor && <div className="text-red-500 text-xs">{errors.valor}</div>}
+          <Input name="color" label="Color" value={form.color} onChange={handleChange} />
+          {errors.color && <div className="text-red-500 text-xs">{errors.color}</div>}
+          <Input name="extras" label="Extras" value={form.extras} onChange={handleChange} />
+          {errors.extras && <div className="text-red-500 text-xs">{errors.extras}</div>}
+          <select name="estado" value={form.estado} onChange={handleChange} className="w-full border rounded px-2 py-1">
+            <option value="">Selecciona estado</option>
+            <option value="DISPONIBLE">DISPONIBLE</option>
+            <option value="VENDIDO">VENDIDO</option>
+            <option value="NO_DISPONIBLE">NO_DISPONIBLE</option>
+            <option value="INACTIVO">INACTIVO</option>
+          </select>
+          {errors.estado && <div className="text-red-500 text-xs">{errors.estado}</div>}
+          <select name="tipo" value={form.tipo} onChange={handleChange} className="w-full border rounded px-2 py-1">
+            <option value="">Selecciona tipo</option>
+            <option value="AUTOMOVIL">AUTOMOVIL</option>
+            <option value="CAMIONETA">CAMIONETA</option>
+            <option value="SUV">SUV</option>
+            <option value="SEDAN">SEDAN</option>
+          </select>
+          {errors.tipo && <div className="text-red-500 text-xs">{errors.tipo}</div>}
+          <select name="combustible" value={form.combustible} onChange={handleChange} className="w-full border rounded px-2 py-1">
+            <option value="">Selecciona combustible</option>
+            <option value="GASOLINA">GASOLINA</option>
+            <option value="DIESEL">DIESEL</option>
+            <option value="HIBRIDO">HIBRIDO</option>
+            <option value="ELECTRICO">ELECTRICO</option>
+          </select>
+          {errors.combustible && <div className="text-red-500 text-xs">{errors.combustible}</div>}
+          <select name="condicion" value={form.condicion} onChange={handleChange} className="w-full border rounded px-2 py-1">
+            <option value="">Selecciona condición</option>
+            <option value="NUEVO">NUEVO</option>
+            <option value="USADO">USADO</option>
+          </select>
+          {errors.condicion && <div className="text-red-500 text-xs">{errors.condicion}</div>}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div>
+              <Input name="placa" label="Placa" value={form.placa} onChange={handleChange} />
+              {errors.placa && <div className="text-red-500 text-xs mt-1">{errors.placa}</div>}
+            </div>
+            <div>
+              <Input name="chasis" label="Chasis" value={form.chasis} onChange={handleChange} />
+              {errors.chasis && <div className="text-red-500 text-xs mt-1">{errors.chasis}</div>}
+            </div>
+            <div>
+              <Input name="motor" label="Motor" value={form.motor} onChange={handleChange} />
+              {errors.motor && <div className="text-red-500 text-xs mt-1">{errors.motor}</div>}
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end mt-6 space-x-2">
+          <Button onClick={handleCloseForm} variant="secondary">Cancelar</Button>
+          <Button onClick={isEditing ? handleUpdate : handleSave} disabled={saving}>{saving ? (isEditing ? 'Actualizando...' : 'Guardando...') : (isEditing ? 'Actualizar' : 'Crear')}</Button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={showDetails} onClose={handleCloseDetails} title="Detalles del Vehículo">
+        {detailsVehicle && (
+          <div className="space-y-2">
+            <div><b>Marca:</b> {detailsVehicle.marca}</div>
+            <div><b>Modelo:</b> {detailsVehicle.modelo}</div>
+            <div><b>Año:</b> {detailsVehicle.anio}</div>
+            <div><b>Valor:</b> ${detailsVehicle.valor}</div>
+            <div><b>Color:</b> {detailsVehicle.color}</div>
+            <div><b>Extras:</b> {detailsVehicle.extras}</div>
+            <div><b>Estado:</b> {detailsVehicle.estado}</div>
+            <div><b>Tipo:</b> {detailsVehicle.tipo}</div>
+            <div><b>Combustible:</b> {detailsVehicle.combustible}</div>
+            <div><b>Condición:</b> {detailsVehicle.condicion}</div>
+            <div><b>Placa:</b> {detailsVehicle.placa}</div>
+            <div><b>Chasis:</b> {detailsVehicle.chasis}</div>
+            <div><b>Motor:</b> {detailsVehicle.motor}</div>
+            <div><b>Cilindraje:</b> {detailsVehicle.cilindraje}</div>
+            <div><b>Concesionario:</b> {concesionarios.find(c => c.ruc === detailsVehicle.concesionario)?.razonSocial || '-'}</div>
+            <div className="flex justify-end mt-6 space-x-2">
+              <Button onClick={handleEditFromDetails}>Editar</Button>
+              <Button onClick={handleDeactivate} variant="danger" disabled={deactivating}>{deactivating ? 'Desactivando...' : 'Desactivar'}</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <IdentificadoresModal isOpen={showIdentificadorModal} onClose={handleCloseIdentificadorModal} />
     </div>
   );
 };

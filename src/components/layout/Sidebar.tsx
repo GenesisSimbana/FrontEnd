@@ -22,6 +22,16 @@ const sidebarItems: SidebarItem[] = [
     icon: '🚗',
   },
   {
+    label: 'Vendedores',
+    href: '/vendedores',
+    icon: '👔',
+  },
+  {
+    label: 'Concesionarios',
+    href: ROUTES.CONCESIONARIOS,
+    icon: '🏢',
+  },
+  {
     label: 'Productos de Crédito',
     href: ROUTES.PRODUCTS,
     icon: '💳',
