@@ -51,6 +51,7 @@ export interface Vehicle {
   specifications: VehicleSpecification[];
   createdAt: string;
   updatedAt: string;
+  concesionario: string;
 }
 
 export const VehicleType = {
@@ -406,4 +407,69 @@ export interface ContractFilters {
   contractDateTo?: string;
   amountFrom?: number;
   amountTo?: number;
+}
+
+// Concesionarios
+export interface Concesionario {
+  id: string;
+  ruc: string;
+  razonSocial: string;
+  direccion: string;
+  telefono: string;
+  emailContacto: string;
+  estado: EstadoConcesionario;
+  vendedores: Vendedor[];
+  vehiculos: VehiculoEnConcesionario[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type EstadoConcesionario = 'ACTIVO' | 'INACTIVO';
+
+// Vendedores
+export interface Vendedor {
+  id: string;
+  cedula: string;
+  nombre: string;
+  apellido: string;
+  email: string;
+  telefono: string;
+  estado: EstadoVendedor;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type EstadoVendedor = 'ACTIVO' | 'INACTIVO';
+
+// Vehículos en concesionario (pueden tener identificadores propios)
+export interface VehiculoEnConcesionario {
+  id: string;
+  placa: string;
+  chasis: string;
+  motor: string;
+  marca: string;
+  modelo: string;
+  anio: number | string;
+  condicion: CondicionVehiculo;
+  estado: EstadoVehiculo;
+  createdAt: string;
+  updatedAt: string;
+  cilindraje?: number;
+  valor?: number;
+  color?: string;
+  extras?: string;
+  tipo?: string;
+  combustible?: string;
+  identificadorVehiculo?: IdentificadorVehiculo;
+}
+
+export type CondicionVehiculo = 'NUEVO' | 'USADO';
+export type EstadoVehiculo = 'ACTIVO' | 'INACTIVO';
+
+// Identificadores de vehículo
+export interface IdentificadorVehiculo {
+  id?: string;
+  placa: string;
+  chasis: string;
+  motor: string;
 }

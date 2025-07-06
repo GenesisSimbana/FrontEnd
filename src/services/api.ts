@@ -102,8 +102,8 @@ class ApiService {
   }
 
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.get<ApiResponse<T>>(url, config);
-    return response.data.data;
+    const response = await this.client.get<T>(url, config);
+    return response.data;
   }
 
   async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {

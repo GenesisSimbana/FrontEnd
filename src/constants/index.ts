@@ -60,6 +60,7 @@ export const ROUTES = {
   SETTINGS: '/settings',
   UNAUTHORIZED: '/unauthorized',
   NOT_FOUND: '/404',
+  CONCESIONARIOS: '/concesionarios',
 } as const;
 
 // Validation

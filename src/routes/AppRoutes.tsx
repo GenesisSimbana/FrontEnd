@@ -30,6 +30,12 @@ import AnalysisPage from '../pages/analysis/AnalysisPage';
 // Contracts
 import ContractsPage from '../pages/contracts/ContractsPage';
 
+// Concesionarios
+import ConcesionariosPage from '../pages/concesionarios/ConcesionariosPage';
+
+// Vendedores
+import VendedoresPage from '../pages/vendedores/VendedoresPage';
+
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
@@ -61,6 +67,12 @@ const AppRoutes: React.FC = () => {
       
       {/* Contracts */}
       <Route path="/contracts" element={<AppLayout><ContractsPage /></AppLayout>} />
+      
+      {/* Concesionarios */}
+      <Route path="/concesionarios" element={<AppLayout><ConcesionariosPage /></AppLayout>} />
+      
+      {/* Vendedores */}
+      <Route path="/vendedores" element={<AppLayout><VendedoresPage /></AppLayout>} />
       
       {/* 404 */}
       <Route path="*" element={<NotFoundPage />} />
