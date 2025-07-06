@@ -14,45 +14,6 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-// User and Authentication types
-export interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: UserRole;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export const UserRole = {
-  ADMIN: 'ADMIN',
-  USER: 'USER',
-  MANAGER: 'MANAGER'
-} as const;
-
-export type UserRole = typeof UserRole[keyof typeof UserRole];
-
-export interface AuthState {
-  user: User | null;
-  token: string | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-}
-
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export interface RegisterData {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-}
-
 // Common types
 export interface BaseEntity {
   id: string;
@@ -79,8 +40,6 @@ export interface NavigationItem {
   href: string;
   icon?: string;
   children?: NavigationItem[];
-  requiresAuth?: boolean;
-  roles?: UserRole[];
 }
 
 // Form types

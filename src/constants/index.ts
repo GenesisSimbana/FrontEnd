@@ -8,8 +8,6 @@ export const API_CONFIG = {
 
 // Microservices endpoints - Sistema de Préstamos Automotrices
 export const MICROSERVICES = {
-  AUTH: import.meta.env.VITE_USER_SERVICE_URL || '/api/auth',
-  USERS: import.meta.env.VITE_USER_SERVICE_URL || '/api/users',
   VEHICLES: import.meta.env.VITE_VEHICLE_SERVICE_URL || '/api/vehicles',
   CREDIT_PRODUCTS: import.meta.env.VITE_CREDIT_PRODUCTS_SERVICE_URL || '/api/products',
   SIMULATION: import.meta.env.VITE_SIMULATION_SERVICE_URL || '/api/simulation',
@@ -18,14 +16,6 @@ export const MICROSERVICES = {
   CONTRACTS: import.meta.env.VITE_CONTRACT_SERVICE_URL || '/api/contracts',
   INTEREST: import.meta.env.VITE_INTEREST_SERVICE_URL || '/api/interest',
   NOTIFICATIONS: import.meta.env.VITE_NOTIFICATION_SERVICE_URL || '/api/notifications',
-} as const;
-
-// Authentication
-export const AUTH_CONFIG = {
-  TOKEN_KEY: 'auth_token',
-  REFRESH_TOKEN_KEY: 'refresh_token',
-  USER_KEY: 'user_data',
-  TOKEN_EXPIRY_KEY: 'token_expiry',
 } as const;
 
 // Pagination
@@ -46,9 +36,7 @@ export const UI_CONSTANTS = {
 // Routes - Sistema de Préstamos Automotrices
 export const ROUTES = {
   HOME: '/',
-  LOGIN: '/login',
   DASHBOARD: '/dashboard',
-  USERS: '/users',
   VEHICLES: '/vehicles',
   PRODUCTS: '/products',
   PRODUCTS_INTEREST: '/products/interest',
@@ -56,9 +44,7 @@ export const ROUTES = {
   LOANS: '/loans',
   ANALYSIS: '/analysis',
   CONTRACTS: '/contracts',
-  PROFILE: '/profile',
   SETTINGS: '/settings',
-  UNAUTHORIZED: '/unauthorized',
   NOT_FOUND: '/404',
 } as const;
 

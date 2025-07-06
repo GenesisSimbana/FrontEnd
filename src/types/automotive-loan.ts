@@ -9,8 +9,8 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-// Usuario y Roles
-export interface User {
+// Cliente (para solicitudes de préstamos)
+export interface Customer {
   id: string;
   email: string;
   firstName: string;
@@ -18,20 +18,10 @@ export interface User {
   phone: string;
   identification: string;
   identificationType: 'CEDULA' | 'PASAPORTE' | 'RUC';
-  role: UserRole;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
-
-export const UserRole = {
-  ADMIN: 'ADMIN',
-  AGENT: 'AGENT',
-  CUSTOMER: 'CUSTOMER',
-  ANALYST: 'ANALYST',
-} as const;
-
-export type UserRole = typeof UserRole[keyof typeof UserRole];
 
 // Vehículos
 export interface Vehicle {
@@ -153,7 +143,7 @@ export interface LoanApplication {
   id: string;
   applicationNumber: string;
   customerId: string;
-  customer: User;
+  customer: Customer;
   vehicleId: string;
   vehicle: Vehicle;
   productId: string;
@@ -269,7 +259,7 @@ export interface CreditAnalysis {
   id: string;
   applicationId: string;
   analystId: string;
-  analyst: User;
+  analystName: string;
   score: number;
   riskLevel: RiskLevel;
   recommendation: AnalysisRecommendation;

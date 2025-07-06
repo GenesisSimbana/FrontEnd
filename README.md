@@ -1,7 +1,3 @@
-# Professional React Frontend for Microservices Architecture
-
-A modern, scalable React frontend application built with TypeScript, designed to consume microservices APIs. This application follows industry best practices and is optimized for deployment on AWS.
-
 ## 🚀 Features
 
 - **Modern Tech Stack**: React 18, TypeScript, Vite, Tailwind CSS
@@ -16,24 +12,6 @@ A modern, scalable React frontend application built with TypeScript, designed to
 - **Docker Support**: Containerized deployment with Nginx
 - **TypeScript**: Full type safety throughout the application
 
-## 🏗️ Architecture
-
-```
-src/
-├── components/          # Reusable UI components
-│   ├── ui/             # Basic UI components (Button, Input, Modal, etc.)
-│   ├── common/         # Common components
-│   ├── layout/         # Layout components
-│   ├── forms/          # Form components
-│   └── modals/         # Modal components
-├── pages/              # Page components
-├── hooks/              # Custom React hooks
-├── services/           # API service layer
-├── contexts/           # Global state management
-├── utils/              # Utility functions
-├── types/              # TypeScript type definitions
-└── constants/          # Application constants
-```
 
 ## 📋 Prerequisites
 
@@ -154,14 +132,6 @@ The application is designed to work with the following microservices:
    npm run docker:run
    ```
 
-## 🔐 Security Features
-
-- JWT token authentication with refresh tokens
-- Secure HTTP headers (CSP, HSTS, etc.)
-- Input validation with Zod
-- XSS protection
-- CORS configuration
-- Environment-based configuration
 
 ## 🧪 Testing
 
@@ -171,15 +141,6 @@ Currently configured for testing setup. Add your preferred testing framework:
 # Example with Jest and React Testing Library
 npm install --save-dev jest @testing-library/react @testing-library/jest-dom
 ```
-
-## 🔄 State Management
-
-Uses Zustand for state management with:
-- Authentication state
-- Global UI state (toasts, modals, etc.)
-- Persistent storage
-- TypeScript integration
-
 ## 📱 Responsive Design
 
 - Mobile-first approach
@@ -204,13 +165,6 @@ Reusable components built with:
 - Loading states
 - TypeScript types for API responses
 
-## 🚨 Error Handling
-
-- Global error boundary
-- API error handling
-- Toast notifications
-- Retry mechanisms
-- User-friendly error messages
 
 ## 📊 Performance
 
@@ -229,14 +183,6 @@ Reusable components built with:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🛟 Support
-
-For support, please open an issue in the repository or contact the development team.
-
 ## 📚 Additional Resources
 
 - [React Documentation](https://react.dev/)
@@ -244,13 +190,3 @@ For support, please open an issue in the repository or contact the development t
 - [Vite Documentation](https://vitejs.dev/)
 - [Tailwind CSS Documentation](https://tailwindcss.com/)
 - [AWS Amplify Documentation](https://docs.amplify.aws/)
-
-## 🎯 Next Steps
-
-1. **Add Testing**: Implement comprehensive testing with Jest and React Testing Library
-2. **Add More Components**: Expand the UI component library
-3. **Implement Analytics**: Add Google Analytics or similar
-4. **Add Monitoring**: Implement error tracking and performance monitoring
-5. **Enhance Security**: Add additional security measures
-6. **Add PWA Features**: Implement Progressive Web App features
-7. **Add Internationalization**: Support multiple languages

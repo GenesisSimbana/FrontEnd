@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { API_CONFIG, AUTH_CONFIG } from '../constants';
+import { API_CONFIG } from '../constants';
 import type { ApiResponse, ApiError } from '../types';
 
 class ApiService {
@@ -19,55 +19,12 @@ class ApiService {
   }
 
   private setupInterceptors(): void {
-    // Request interceptor
-    this.client.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem(AUTH_CONFIG.TOKEN_KEY);
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => {
-        return Promise.reject(error);
-      }
-    );
-
     // Response interceptor
     this.client.interceptors.response.use(
       (response: AxiosResponse) => {
         return response;
       },
       async (error) => {
-        const originalRequest = error.config;
-
-        // Handle 401 errors (unauthorized)
-        if (error.response?.status === 401 && !originalRequest._retry) {
-          originalRequest._retry = true;
-          
-          try {
-            const refreshToken = localStorage.getItem(AUTH_CONFIG.REFRESH_TOKEN_KEY);
-            if (refreshToken) {
-              const response = await this.client.post('/auth/refresh', {
-                refreshToken,
-              });
-              
-              const { token } = response.data;
-              localStorage.setItem(AUTH_CONFIG.TOKEN_KEY, token);
-              
-              // Retry the original request
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-              return this.client(originalRequest);
-            }
-          } catch (refreshError) {
-            // Refresh failed, logout user
-            localStorage.removeItem(AUTH_CONFIG.TOKEN_KEY);
-            localStorage.removeItem(AUTH_CONFIG.REFRESH_TOKEN_KEY);
-            localStorage.removeItem(AUTH_CONFIG.USER_KEY);
-            window.location.href = '/login';
-          }
-        }
-
         return Promise.reject(this.handleError(error));
       }
     );

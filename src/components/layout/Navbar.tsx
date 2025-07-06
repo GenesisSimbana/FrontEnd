@@ -14,8 +14,6 @@ const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle }) => {
     switch (path) {
       case '/dashboard':
         return 'Dashboard';
-      case '/users':
-        return 'Gestión de Usuarios';
       case '/vehicles':
         return 'Catálogo de Vehículos';
       case '/products':
@@ -51,9 +49,6 @@ const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle }) => {
         
         // Mapear segmentos a labels más amigables
         switch (segment) {
-          case 'users':
-            label = 'Usuarios';
-            break;
           case 'vehicles':
             label = 'Vehículos';
             break;
@@ -155,21 +150,6 @@ const Navbar: React.FC<NavbarProps> = ({ onSidebarToggle }) => {
             </svg>
           </button>
 
-          {/* User menu */}
-          <div className="relative">
-            <button className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 transition-colors">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-medium">U</span>
-              </div>
-              <div className="hidden md:block text-left">
-                <p className="text-sm font-medium text-gray-900">Usuario Actual</p>
-                <p className="text-xs text-gray-500">Agente de Crédito</p>
-              </div>
-              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          </div>
         </div>
       </div>
     </header>

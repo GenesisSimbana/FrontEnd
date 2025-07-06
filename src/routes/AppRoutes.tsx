@@ -3,13 +3,8 @@ import { Routes, Route } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 
 // Pages
-import HomePage from '../pages/HomePage';
-import LoginPage from '../pages/LoginPage';
 import DashboardPage from '../pages/DashboardPage';
 import NotFoundPage from '../pages/NotFoundPage';
-
-// Users
-import UsersPage from '../pages/users/UsersPage';
 
 // Vehicles
 import VehiclesPage from '../pages/vehicles/VehiclesPage';
@@ -33,15 +28,9 @@ import ContractsPage from '../pages/contracts/ContractsPage';
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* Public routes */}
-      <Route path="/" element={<HomePage />} />
-      <Route path="/login" element={<LoginPage />} />
-      
-      {/* Protected routes with layout */}
+      {/* Main route - redirect to dashboard */}
+      <Route path="/" element={<AppLayout><DashboardPage /></AppLayout>} />
       <Route path="/dashboard" element={<AppLayout><DashboardPage /></AppLayout>} />
-      
-      {/* Users */}
-      <Route path="/users" element={<AppLayout><UsersPage /></AppLayout>} />
       
       {/* Vehicles */}
       <Route path="/vehicles" element={<AppLayout><VehiclesPage /></AppLayout>} />
