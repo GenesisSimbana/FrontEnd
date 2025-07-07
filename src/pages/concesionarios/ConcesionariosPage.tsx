@@ -9,9 +9,6 @@ import {
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
-import VendedoresModal from './VendedoresModal';
-import VehiculosModal from './VehiculosModal';
-import IdentificadoresModal from './IdentificadoresModal';
 
 const ConcesionariosPage: React.FC = () => {
   const [concesionarios, setConcesionarios] = useState<Concesionario[]>([]);
@@ -19,11 +16,6 @@ const ConcesionariosPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState<Concesionario | null>(null);
   const [form, setForm] = useState<Partial<Concesionario>>({});
-  const [showVendedores, setShowVendedores] = useState(false);
-  const [showVehiculos, setShowVehiculos] = useState(false);
-  const [showIdentificadores, setShowIdentificadores] = useState(false);
-  const [activeRuc, setActiveRuc] = useState<string | null>(null);
-  const [identificadorId, setIdentificadorId] = useState<string | undefined>(undefined);
   const [errors, setErrors] = useState<any>({});
 
   const fetchConcesionarios = async () => {
@@ -90,16 +82,6 @@ const ConcesionariosPage: React.FC = () => {
   const handleDesactivar = async (ruc: string) => {
     await desactivarConcesionario(ruc);
     fetchConcesionarios();
-  };
-
-  const openVendedores = (ruc: string) => {
-    setActiveRuc(ruc);
-    setShowVendedores(true);
-  };
-
-  const openVehiculos = (ruc: string) => {
-    setActiveRuc(ruc);
-    setShowVehiculos(true);
   };
 
   return (

@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { vehicleService } from '../../services/vehicleService';
-import { useApi } from '../../hooks/useApi';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import type { Vehicle, VehicleType, VehicleCategory } from '../../types/automotive-loan';
+import type { VehicleType, VehicleCategory } from '../../types/automotive-loan';
 import { getConcesionariosByEstado, getVehiculosByRuc, createVehiculo, createIdentificadorVehiculo, updateVehiculo, desactivarVehiculo } from '../../services/concesionarioService';
 import Modal from '../../components/ui/Modal';
 import IdentificadoresModal from '../concesionarios/IdentificadoresModal';
@@ -278,9 +276,6 @@ const VehiclesPage: React.FC = () => {
     setDetailsVehicle(null);
   };
 
-  const handleOpenIdentificadorModal = () => {
-    setShowIdentificadorModal(true);
-  };
 
   const handleCloseIdentificadorModal = () => {
     setShowIdentificadorModal(false);
