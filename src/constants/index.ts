@@ -8,14 +8,28 @@ export const API_CONFIG = {
 
 // Microservices endpoints - Sistema de Préstamos Automotrices
 export const MICROSERVICES = {
-  VEHICLES: import.meta.env.VITE_VEHICLE_SERVICE_URL || '/api/vehicles',
-  CREDIT_PRODUCTS: import.meta.env.VITE_CREDIT_PRODUCTS_SERVICE_URL || '/api/products',
-  SIMULATION: import.meta.env.VITE_SIMULATION_SERVICE_URL || '/api/simulation',
-  LOANS: import.meta.env.VITE_LOAN_SERVICE_URL || '/api/loans',
-  ANALYSIS: import.meta.env.VITE_ANALYSIS_SERVICE_URL || '/api/analysis',
-  CONTRACTS: import.meta.env.VITE_CONTRACT_SERVICE_URL || '/api/contracts',
-  INTEREST: import.meta.env.VITE_INTEREST_SERVICE_URL || '/api/interest',
-  NOTIFICATIONS: import.meta.env.VITE_NOTIFICATION_SERVICE_URL || '/api/notifications',
+  // Análisis Services
+  ORIGINACION: import.meta.env.VITE_ORIGINACION_SERVICE_URL || 'http://18.223.158.69:8081',
+  VEHICULOS: import.meta.env.VITE_VEHICULOS_SERVICE_URL || 'http://18.223.158.69:8082',
+  FORMALIZACION: import.meta.env.VITE_FORMALIZACION_SERVICE_URL || 'http://18.223.158.69:8083',
+  
+  // Core Services
+  GENERAL: import.meta.env.VITE_GENERAL_SERVICE_URL || 'http://3.129.67.241:8084',
+  CLIENTES: import.meta.env.VITE_CLIENTES_SERVICE_URL || 'http://3.129.67.241:8083',
+  CUENTAS_CONFIG: import.meta.env.VITE_CUENTAS_CONFIG_SERVICE_URL || 'http://3.129.67.241:8082',
+  CUENTAS_TRANS: import.meta.env.VITE_CUENTAS_TRANS_SERVICE_URL || 'http://3.129.67.241:8085',
+  TRANSACCIONES: import.meta.env.VITE_TRANSACCIONES_SERVICE_URL || 'http://3.129.67.241:8080',
+  CATALOG: import.meta.env.VITE_CATALOG_SERVICE_URL || 'http://3.129.67.241:8081',
+  
+  // Legacy compatibility
+  VEHICLES: import.meta.env.VITE_VEHICULOS_SERVICE_URL || 'http://18.223.158.69:8082',
+  CREDIT_PRODUCTS: import.meta.env.VITE_CATALOG_SERVICE_URL || 'http://3.129.67.241:8081',
+  SIMULATION: import.meta.env.VITE_ORIGINACION_SERVICE_URL || 'http://18.223.158.69:8081',
+  LOANS: import.meta.env.VITE_ORIGINACION_SERVICE_URL || 'http://18.223.158.69:8081',
+  ANALYSIS: import.meta.env.VITE_ORIGINACION_SERVICE_URL || 'http://18.223.158.69:8081',
+  CONTRACTS: import.meta.env.VITE_FORMALIZACION_SERVICE_URL || 'http://18.223.158.69:8083',
+  INTEREST: import.meta.env.VITE_CATALOG_SERVICE_URL || 'http://3.129.67.241:8081',
+  NOTIFICATIONS: import.meta.env.VITE_GENERAL_SERVICE_URL || 'http://3.129.67.241:8084',
 } as const;
 
 // Pagination
