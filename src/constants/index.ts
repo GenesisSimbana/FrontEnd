@@ -10,7 +10,7 @@ export const API_CONFIG = {
 export const MICROSERVICES = {
   // Análisis Services
   ORIGINACION: import.meta.env.VITE_ORIGINACION_SERVICE_URL || 'http://18.223.158.69:8081',
-  VEHICULOS: import.meta.env.VITE_VEHICULOS_SERVICE_URL || 'http://18.223.158.69:8082',
+  VEHICULOS: import.meta.env.VITE_VEHICULOS_SERVICE_URL || 'http://ec2-18-223-158-69.us-east-2.compute.amazonaws.com:8082',
   FORMALIZACION: import.meta.env.VITE_FORMALIZACION_SERVICE_URL || 'http://18.223.158.69:8083',
   
   // Core Services
