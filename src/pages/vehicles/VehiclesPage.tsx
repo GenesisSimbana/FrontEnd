@@ -491,12 +491,6 @@ const VehiclesPage: React.FC = () => {
 
                   <div className="flex space-x-2">
                     <Button onClick={() => handleShowDetails(vehicle)} className="mr-2">Ver Detalles</Button>
-                    <Link
-                      to={`/credit-simulation?vehicleId=${vehicle.id}`}
-                      className="flex-1 bg-green-600 text-white text-center py-2 px-4 rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
-                    >
-                      Simular
-                    </Link>
                   </div>
                 </div>
               </div>
