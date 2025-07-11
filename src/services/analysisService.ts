@@ -35,6 +35,17 @@ export interface CreateAnalysisRequest {
   conditions: string[];
 }
 
+// NUEVO: Tipo para el DTO del backend
+export interface CreditEvaluationDTO {
+  idSolicitud: number;
+  estado: string;
+  capacidadPago: number;
+  nivelRiesgo: string;
+  decisionAutomatica: string;
+  observaciones: string;
+  justificacionAnalista: string;
+}
+
 class AnalysisService {
   private baseUrl = MICROSERVICES.ANALYSIS;
 
@@ -220,6 +231,20 @@ class AnalysisService {
 
   async cloneAnalysis(id: string, newApplicationId: string): Promise<CreditAnalysis> {
     return apiService.post<CreditAnalysis>(`${this.baseUrl}/${id}/clone`, { newApplicationId });
+  }
+
+ 
+  async getAllCreditEvaluations(): Promise<CreditEvaluationDTO[]> {
+    return apiService.get<CreditEvaluationDTO[]>(`${this.baseUrl}/v1/credit-analysis`);
+  }
+
+  async getCreditEvaluationById(idSolicitud: number): Promise<CreditEvaluationDTO> {
+    return apiService.get<CreditEvaluationDTO>(`${this.baseUrl}/v1/credit-analysis/${idSolicitud}`);
+  }
+
+  // Ejecutar evaluación automática de la solicitud
+  async ejecutarEvaluacionAutomatica(idSolicitud: number): Promise<void> {
+    return apiService.post<void>(`${this.baseUrl}/v1/credit-analysis/${idSolicitud}/evaluate`);
   }
 }
 
