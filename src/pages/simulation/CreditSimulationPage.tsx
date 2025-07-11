@@ -1,32 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { simulationService } from '../../services/simulationService';
-import { vehicleService } from '../../services/vehicleService';
-import { creditProductService } from '../../services/creditProductService';
+import { originacionService } from '../../services/originacionService';
+import { concesionarioApiService } from '../../services/concesionarioApiService';
 import { useApi } from '../../hooks/useApi';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import type { Vehicle, CreditProduct, CreditSimulation } from '../../types/automotive-loan';
+import type { 
+  SimulacionCreditoRequestDTO, 
+  SimulacionCreditoResponseDTO,
+  Concesionario,
+  VehiculoEnConcesionario
+} from '../../types/automotive-loan';
 
 const simulationSchema = z.object({
-  vehicleId: z.string().min(1, 'Debe seleccionar un vehículo'),
-  productId: z.string().min(1, 'Debe seleccionar un producto'),
-  downPayment: z.number().min(0, 'El valor debe ser mayor a 0'),
-  termMonths: z.number().min(12, 'Mínimo 12 meses').max(84, 'Máximo 84 meses'),
+  placaVehiculo: z.string().min(1, 'Debe ingresar la placa del vehículo'),
+  rucConcesionario: z.string().min(1, 'Debe ingresar el RUC del concesionario'),
+  montoSolicitado: z.number().min(1000, 'El monto mínimo es $1,000').max(100000, 'El monto máximo es $100,000'),
+  plazoMeses: z.number().min(12, 'Mínimo 12 meses').max(84, 'Máximo 84 meses'),
+  tasaInteres: z.number().min(1, 'La tasa mínima es 1%').max(50, 'La tasa máxima es 50%'),
 });
 
 type SimulationFormData = z.infer<typeof simulationSchema>;
 
 const CreditSimulationPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [products, setProducts] = useState<CreditProduct[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<CreditProduct | null>(null);
-  const [simulation, setSimulation] = useState<CreditSimulation | null>(null);
+  const [concesionarios, setConcesionarios] = useState<Concesionario[]>([]);
+  const [vehiculos, setVehiculos] = useState<VehiculoEnConcesionario[]>([]);
+  const [selectedConcesionario, setSelectedConcesionario] = useState<Concesionario | null>(null);
+  const [selectedVehiculo, setSelectedVehiculo] = useState<VehiculoEnConcesionario | null>(null);
+  const [simulation, setSimulation] = useState<SimulacionCreditoResponseDTO | null>(null);
+  const [activeTab, setActiveTab] = useState<'resumen' | 'conEntrada' | 'sinEntrada' | 'plazoMaximo'>('resumen');
 
   const {
     register,
@@ -36,28 +40,35 @@ const CreditSimulationPage: React.FC = () => {
     formState: { errors },
   } = useForm<SimulationFormData>({
     resolver: zodResolver(simulationSchema),
+    defaultValues: {
+      tasaInteres: 15,
+      plazoMeses: 36,
+    }
   });
 
-  const vehicleId = watch('vehicleId');
-  const productId = watch('productId');
-  const downPayment = watch('downPayment');
+  const placaVehiculo = watch('placaVehiculo');
+  const rucConcesionario = watch('rucConcesionario');
+  const montoSolicitado = watch('montoSolicitado');
 
-  const { loading: loadingVehicles, execute: fetchVehicles } = useApi(
-    vehicleService.getVehicles,
+  // Cargar concesionarios activos
+  const { loading: loadingConcesionarios, execute: fetchConcesionarios } = useApi(
+    () => concesionarioApiService.getConcesionariosByEstado('ACTIVO'),
     {
-      onSuccess: (data) => setVehicles(data.data),
+      onSuccess: (data) => setConcesionarios(data),
     }
   );
 
-  const { loading: loadingProducts, execute: fetchProducts } = useApi(
-    creditProductService.getActiveCreditProducts,
+  // Cargar vehículos de un concesionario
+  const { loading: loadingVehiculos, execute: fetchVehiculos } = useApi(
+    (ruc: string) => concesionarioApiService.getVehiculosByEstado(ruc, 'ACTIVO'),
     {
-      onSuccess: (data) => setProducts(data),
+      onSuccess: (data) => setVehiculos(data),
     }
   );
 
-  const { loading: simulating, execute: createSimulation } = useApi(
-    simulationService.createSimulation,
+  // Simular crédito
+  const { loading: simulating, execute: simularCredito } = useApi(
+    originacionService.simularCredito,
     {
       onSuccess: (data) => setSimulation(data),
       showSuccessToast: true,
@@ -66,42 +77,36 @@ const CreditSimulationPage: React.FC = () => {
   );
 
   useEffect(() => {
-    fetchVehicles({ isAvailable: true, pageSize: 100 });
-    fetchProducts();
-    
-    // Pre-select vehicle if provided in URL
-    const vehicleIdParam = searchParams.get('vehicleId');
-    if (vehicleIdParam) {
-      setValue('vehicleId', vehicleIdParam);
-    }
+    fetchConcesionarios();
   }, []);
 
   useEffect(() => {
-    if (vehicleId && vehicles.length > 0) {
-      const vehicle = vehicles.find(v => v.id === vehicleId);
-      setSelectedVehicle(vehicle || null);
-      
-      // Set minimum down payment (usually 10% of vehicle price)
-      if (vehicle && !downPayment) {
-        setValue('downPayment', Math.round(vehicle.price * 0.1));
-      }
+    if (rucConcesionario) {
+      fetchVehiculos(rucConcesionario);
+      const concesionario = concesionarios.find(c => c.ruc === rucConcesionario);
+      setSelectedConcesionario(concesionario || null);
+    } else {
+      setVehiculos([]);
+      setSelectedConcesionario(null);
     }
-  }, [vehicleId, vehicles]);
+  }, [rucConcesionario, concesionarios]);
 
   useEffect(() => {
-    if (productId && products.length > 0) {
-      const product = products.find(p => p.id === productId);
-      setSelectedProduct(product || null);
+    if (placaVehiculo && vehiculos.length > 0) {
+      const vehiculo = vehiculos.find(v => v.placa === placaVehiculo);
+      setSelectedVehiculo(vehiculo || null);
+      
+      // Establecer el valor del vehículo si está disponible
+      if (vehiculo?.valor && !montoSolicitado) {
+        setValue('montoSolicitado', vehiculo.valor);
+      }
+    } else {
+      setSelectedVehiculo(null);
     }
-  }, [productId, products]);
+  }, [placaVehiculo, vehiculos, montoSolicitado]);
 
   const onSubmit = (data: SimulationFormData) => {
-    createSimulation({
-      vehicleId: data.vehicleId,
-      productId: data.productId,
-      downPayment: data.downPayment,
-      termMonths: data.termMonths,
-    });
+    simularCredito(data);
   };
 
   const formatCurrency = (amount: number) => {
@@ -112,16 +117,12 @@ const CreditSimulationPage: React.FC = () => {
     }).format(amount);
   };
 
-  const loanAmount = selectedVehicle && downPayment 
-    ? selectedVehicle.price - downPayment 
-    : 0;
-
-  const downPaymentPercentage = selectedVehicle && downPayment
-    ? (downPayment / selectedVehicle.price) * 100
-    : 0;
+  const formatPercentage = (value: number) => {
+    return `${value.toFixed(2)}%`;
+  };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900">Simulador de Crédito Automotriz</h1>
@@ -136,109 +137,91 @@ const CreditSimulationPage: React.FC = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Datos de la Simulación</h2>
           
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Vehicle Selection */}
+            {/* Concesionario Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Vehículo
+                Concesionario
               </label>
               <select
-                {...register('vehicleId')}
+                {...register('rucConcesionario')}
                 className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                disabled={loadingVehicles}
+                disabled={loadingConcesionarios}
               >
-                <option value="">Seleccionar vehículo...</option>
-                {vehicles.map((vehicle) => (
-                  <option key={vehicle.id} value={vehicle.id}>
-                    {vehicle.make} {vehicle.model} {vehicle.year} - {formatCurrency(vehicle.price)}
+                <option value="">Seleccionar concesionario...</option>
+                {concesionarios.map((concesionario) => (
+                  <option key={concesionario.ruc} value={concesionario.ruc}>
+                    {concesionario.razonSocial} - {concesionario.ruc}
                   </option>
                 ))}
               </select>
-              {errors.vehicleId && (
-                <p className="mt-1 text-sm text-red-600">{errors.vehicleId.message}</p>
+              {errors.rucConcesionario && (
+                <p className="mt-1 text-sm text-red-600">{errors.rucConcesionario.message}</p>
+              )}
+            </div>
+
+            {/* Vehicle Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Vehículo (Placa)
+              </label>
+              <select
+                {...register('placaVehiculo')}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={loadingVehiculos || !rucConcesionario}
+              >
+                <option value="">Seleccionar vehículo...</option>
+                {vehiculos.map((vehiculo) => (
+                  <option key={vehiculo.placa} value={vehiculo.placa}>
+                    {vehiculo.placa} - {vehiculo.marca} {vehiculo.modelo} {vehiculo.anio}
+                    {vehiculo.valor && ` - ${formatCurrency(vehiculo.valor)}`}
+                  </option>
+                ))}
+              </select>
+              {errors.placaVehiculo && (
+                <p className="mt-1 text-sm text-red-600">{errors.placaVehiculo.message}</p>
               )}
             </div>
 
             {/* Selected Vehicle Info */}
-            {selectedVehicle && (
+            {selectedVehiculo && (
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h3 className="font-medium text-blue-900">Vehículo Seleccionado</h3>
                 <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-blue-700">Marca:</span> {selectedVehicle.make}
+                    <span className="text-blue-700">Placa:</span> {selectedVehiculo.placa}
                   </div>
                   <div>
-                    <span className="text-blue-700">Modelo:</span> {selectedVehicle.model}
+                    <span className="text-blue-700">Marca:</span> {selectedVehiculo.marca}
                   </div>
                   <div>
-                    <span className="text-blue-700">Año:</span> {selectedVehicle.year}
+                    <span className="text-blue-700">Modelo:</span> {selectedVehiculo.modelo}
                   </div>
                   <div>
-                    <span className="text-blue-700">Precio:</span> {formatCurrency(selectedVehicle.price)}
+                    <span className="text-blue-700">Año:</span> {selectedVehiculo.anio}
+                  </div>
+                  {selectedVehiculo.valor && (
+                    <div>
+                      <span className="text-blue-700">Valor:</span> {formatCurrency(selectedVehiculo.valor)}
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-blue-700">Condición:</span> {selectedVehiculo.condicion}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Product Selection */}
+            {/* Requested Amount */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Producto de Crédito
-              </label>
-              <select
-                {...register('productId')}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                disabled={loadingProducts}
-              >
-                <option value="">Seleccionar producto...</option>
-                {products.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name} - Tasa desde {product.baseInterestRate}%
-                  </option>
-                ))}
-              </select>
-              {errors.productId && (
-                <p className="mt-1 text-sm text-red-600">{errors.productId.message}</p>
-              )}
-            </div>
-
-            {/* Selected Product Info */}
-            {selectedProduct && (
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h3 className="font-medium text-green-900">Producto Seleccionado</h3>
-                <p className="text-sm text-green-700 mt-1">{selectedProduct.description}</p>
-                <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-green-700">Monto min:</span> {formatCurrency(selectedProduct.minAmount)}
-                  </div>
-                  <div>
-                    <span className="text-green-700">Monto max:</span> {formatCurrency(selectedProduct.maxAmount)}
-                  </div>
-                  <div>
-                    <span className="text-green-700">Plazo min:</span> {selectedProduct.minTermMonths} meses
-                  </div>
-                  <div>
-                    <span className="text-green-700">Plazo max:</span> {selectedProduct.maxTermMonths} meses
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Down Payment */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Entrada (USD)
+                Monto Solicitado (USD)
               </label>
               <Input
                 type="number"
-                {...register('downPayment', { valueAsNumber: true })}
-                placeholder="Valor de la entrada"
-                error={errors.downPayment?.message}
+                {...register('montoSolicitado', { valueAsNumber: true })}
+                placeholder="Monto a solicitar"
+                error={errors.montoSolicitado?.message}
               />
-              {selectedVehicle && downPayment && (
-                <p className="mt-1 text-sm text-gray-600">
-                  {downPaymentPercentage.toFixed(1)}% del precio del vehículo
-                </p>
-              )}
             </div>
 
             {/* Term */}
@@ -247,7 +230,7 @@ const CreditSimulationPage: React.FC = () => {
                 Plazo (meses)
               </label>
               <select
-                {...register('termMonths', { valueAsNumber: true })}
+                {...register('plazoMeses', { valueAsNumber: true })}
                 className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Seleccionar plazo...</option>
@@ -257,37 +240,30 @@ const CreditSimulationPage: React.FC = () => {
                   </option>
                 ))}
               </select>
-              {errors.termMonths && (
-                <p className="mt-1 text-sm text-red-600">{errors.termMonths.message}</p>
+              {errors.plazoMeses && (
+                <p className="mt-1 text-sm text-red-600">{errors.plazoMeses.message}</p>
               )}
             </div>
 
-            {/* Loan Amount Summary */}
-            {selectedVehicle && downPayment && (
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-medium text-gray-900">Resumen</h3>
-                <div className="mt-2 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Precio del vehículo:</span>
-                    <span className="font-medium">{formatCurrency(selectedVehicle.price)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Entrada:</span>
-                    <span className="font-medium">{formatCurrency(downPayment)}</span>
-                  </div>
-                  <div className="flex justify-between border-t pt-2">
-                    <span className="font-medium">Monto a financiar:</span>
-                    <span className="font-bold text-blue-600">{formatCurrency(loanAmount)}</span>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Interest Rate */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tasa de Interés (%)
+              </label>
+              <Input
+                type="number"
+                step="0.01"
+                {...register('tasaInteres', { valueAsNumber: true })}
+                placeholder="Tasa de interés anual"
+                error={errors.tasaInteres?.message}
+              />
+            </div>
 
             <Button 
               type="submit" 
               fullWidth 
               loading={simulating}
-              disabled={!selectedVehicle || !selectedProduct}
+              disabled={!rucConcesionario || !placaVehiculo}
             >
               Simular Crédito
             </Button>
@@ -305,85 +281,166 @@ const CreditSimulationPage: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Monthly Payment */}
-              <div className="text-center bg-blue-50 p-6 rounded-lg">
-                <h3 className="text-lg font-medium text-blue-900 mb-2">Cuota Mensual</h3>
-                <p className="text-4xl font-bold text-blue-600">
-                  {formatCurrency(simulation.monthlyPayment)}
-                </p>
-                <p className="text-sm text-blue-700 mt-2">
-                  Por {simulation.termMonths} meses
-                </p>
+              {/* Tabs */}
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8">
+                  <button
+                    onClick={() => setActiveTab('resumen')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'resumen'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Resumen
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('conEntrada')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'conEntrada'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Con Entrada 20%
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('sinEntrada')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'sinEntrada'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Sin Entrada
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('plazoMaximo')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                      activeTab === 'plazoMaximo'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Plazo Máximo
+                  </button>
+                </nav>
               </div>
 
-              {/* Simulation Details */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900">Tasa de Interés</h4>
-                  <p className="text-2xl font-bold text-gray-600">{simulation.interestRate}%</p>
-                  <p className="text-sm text-gray-500">Anual</p>
-                </div>
-                
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900">Total a Pagar</h4>
-                  <p className="text-lg font-bold text-gray-600">
-                    {formatCurrency(simulation.totalAmount)}
-                  </p>
-                </div>
-                
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900">Total Intereses</h4>
-                  <p className="text-lg font-bold text-gray-600">
-                    {formatCurrency(simulation.totalInterest)}
-                  </p>
-                </div>
-                
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-900">Monto Financiado</h4>
-                  <p className="text-lg font-bold text-gray-600">
-                    {formatCurrency(simulation.loanAmount)}
-                  </p>
-                </div>
-              </div>
+              {/* Tab Content */}
+              {activeTab === 'resumen' && (
+                <div className="space-y-6">
+                  {/* Vehicle Info */}
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h3 className="font-medium text-gray-900 mb-3">Información del Vehículo</h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-600">Placa:</span> {simulation.placaVehiculo}
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Valor:</span> {formatCurrency(simulation.valorVehiculo)}
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Monto Solicitado:</span> {formatCurrency(simulation.montoSolicitado)}
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Tasa de Interés:</span> {formatPercentage(simulation.tasaInteres * 100)}
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Payment Schedule Preview */}
-              {simulation.paymentSchedule && simulation.paymentSchedule.length > 0 && (
+                  {/* Scenarios Summary */}
+                  <div>
+                    <h3 className="font-medium text-gray-900 mb-3">Escenarios de Financiamiento</h3>
+                    <div className="space-y-4">
+                      {simulation.resumenEscenarios.map((escenario, index) => (
+                        <div key={index} className="border border-gray-200 rounded-lg p-4">
+                          <h4 className="font-medium text-gray-900 mb-2">{escenario.nombreEscenario}</h4>
+                          <p className="text-sm text-gray-600 mb-3">{escenario.descripcion}</p>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-600">Cuota Mensual:</span>
+                              <div className="font-bold text-blue-600">{formatCurrency(escenario.cuotaMensual)}</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Monto Financiado:</span>
+                              <div className="font-medium">{formatCurrency(escenario.montoFinanciado)}</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Plazo:</span>
+                              <div className="font-medium">{escenario.plazoMeses} meses</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Total a Pagar:</span>
+                              <div className="font-medium">{formatCurrency(escenario.montoTotal)}</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Total Intereses:</span>
+                              <div className="font-medium">{formatCurrency(escenario.totalIntereses)}</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-600">Entrada:</span>
+                              <div className="font-medium">{formatCurrency(escenario.entrada)}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tabla de Amortización */}
+              {(activeTab === 'conEntrada' || activeTab === 'sinEntrada' || activeTab === 'plazoMaximo') && (
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Primeras Cuotas</h4>
+                  <h3 className="font-medium text-gray-900 mb-3">
+                    Tabla de Amortización - {
+                      activeTab === 'conEntrada' ? 'Con Entrada 20%' :
+                      activeTab === 'sinEntrada' ? 'Sin Entrada' : 'Plazo Máximo'
+                    }
+                  </h3>
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-3 py-2 text-left">Cuota</th>
-                          <th className="px-3 py-2 text-left">Capital</th>
+                          <th className="px-3 py-2 text-left">Saldo Inicial</th>
+                          <th className="px-3 py-2 text-left">Cuota</th>
+                          <th className="px-3 py-2 text-left">Abono Capital</th>
                           <th className="px-3 py-2 text-left">Interés</th>
-                          <th className="px-3 py-2 text-left">Saldo</th>
+                          <th className="px-3 py-2 text-left">Saldo Final</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {simulation.paymentSchedule.slice(0, 5).map((payment) => (
-                          <tr key={payment.paymentNumber}>
-                            <td className="px-3 py-2">{payment.paymentNumber}</td>
-                            <td className="px-3 py-2">{formatCurrency(payment.principalAmount)}</td>
-                            <td className="px-3 py-2">{formatCurrency(payment.interestAmount)}</td>
-                            <td className="px-3 py-2">{formatCurrency(payment.remainingBalance)}</td>
+                        {(activeTab === 'conEntrada' ? simulation.tablaConEntrada20 :
+                          activeTab === 'sinEntrada' ? simulation.tablaSinEntrada :
+                          simulation.tablaPlazoMaximo).slice(0, 12).map((cuota) => (
+                          <tr key={cuota.numeroCuota}>
+                            <td className="px-3 py-2">{cuota.numeroCuota}</td>
+                            <td className="px-3 py-2">{formatCurrency(cuota.saldoInicial)}</td>
+                            <td className="px-3 py-2 font-medium">{formatCurrency(cuota.cuota)}</td>
+                            <td className="px-3 py-2">{formatCurrency(cuota.abonoCapital)}</td>
+                            <td className="px-3 py-2">{formatCurrency(cuota.interes)}</td>
+                            <td className="px-3 py-2">{formatCurrency(cuota.saldoFinal)}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                  {simulation.paymentSchedule.length > 5 && (
-                    <p className="text-sm text-gray-500 mt-2">
-                      Y {simulation.paymentSchedule.length - 5} cuotas más...
-                    </p>
-                  )}
+                  <p className="text-sm text-gray-500 mt-2">
+                    Mostrando las primeras 12 cuotas de {
+                      activeTab === 'conEntrada' ? simulation.tablaConEntrada20.length :
+                      activeTab === 'sinEntrada' ? simulation.tablaSinEntrada.length :
+                      simulation.tablaPlazoMaximo.length
+                    } cuotas totales
+                  </p>
                 </div>
               )}
 
               {/* Actions */}
-              <div className="flex space-x-3">
+              <div className="flex space-x-3 pt-4">
                 <Button variant="secondary" fullWidth>
-                  Ver Tabla Completa
+                  Descargar PDF
                 </Button>
                 <Button fullWidth>
                   Aplicar al Crédito

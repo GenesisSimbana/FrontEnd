@@ -463,3 +463,46 @@ export interface IdentificadorVehiculo {
   chasis: string;
   motor: string;
 }
+
+// Tipos específicos para simulación de crédito (Originación Service)
+export interface SimulacionCreditoRequestDTO {
+  placaVehiculo: string;
+  rucConcesionario: string;
+  montoSolicitado: number;
+  plazoMeses: number;
+  tasaInteres: number;
+}
+
+export interface ResumenEscenario {
+  nombreEscenario: string;
+  montoFinanciado: number;
+  plazoMeses: number;
+  cuotaMensual: number;
+  montoTotal: number;
+  totalIntereses: number;
+  entrada: number;
+  descripcion: string;
+}
+
+export interface CuotaAmortizacion {
+  numeroCuota: number;
+  saldoInicial: number;
+  cuota: number;
+  abonoCapital: number;
+  interes: number;
+  saldoFinal: number;
+  escenario: string;
+}
+
+export interface SimulacionCreditoResponseDTO {
+  placaVehiculo: string;
+  rucConcesionario: string;
+  valorVehiculo: number;
+  montoSolicitado: number;
+  plazoOriginal: number;
+  tasaInteres: number;
+  resumenEscenarios: ResumenEscenario[];
+  tablaConEntrada20: CuotaAmortizacion[];
+  tablaSinEntrada: CuotaAmortizacion[];
+  tablaPlazoMaximo: CuotaAmortizacion[];
+}

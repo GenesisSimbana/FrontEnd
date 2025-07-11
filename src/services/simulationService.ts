@@ -1,6 +1,12 @@
 import { apiService } from './api';
 import { MICROSERVICES } from '../constants';
-import type { CreditSimulation, SimulationRequest, PaginatedResponse } from '../types/automotive-loan';
+import type { 
+  CreditSimulation, 
+  SimulationRequest, 
+  PaginatedResponse,
+  SimulacionCreditoRequestDTO,
+  SimulacionCreditoResponseDTO
+} from '../types/automotive-loan';
 
 export interface SimulationQueryParams {
   page?: number;
@@ -23,6 +29,7 @@ export interface QuickSimulationRequest {
 
 class SimulationService {
   private baseUrl = MICROSERVICES.SIMULATION;
+  private originacionUrl = MICROSERVICES.ORIGINACION;
 
   async createSimulation(data: SimulationRequest): Promise<CreditSimulation> {
     return apiService.post<CreditSimulation>(this.baseUrl, data);
@@ -112,6 +119,11 @@ class SimulationService {
       popularTerms: { term: number; count: number }[];
       popularProducts: { productId: string; productName: string; count: number }[];
     }>(`${this.baseUrl}/stats`);
+  }
+
+  // Nuevo método para simulación de crédito usando el endpoint de originación
+  async simularCredito(data: SimulacionCreditoRequestDTO): Promise<SimulacionCreditoResponseDTO> {
+    return apiService.post<SimulacionCreditoResponseDTO>(`${this.originacionUrl}/api/v1/solicitudes/simular`, data);
   }
 }
 
