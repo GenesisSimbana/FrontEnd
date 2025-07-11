@@ -18,8 +18,8 @@ class ConcesionarioApiService {
     return response.data;
   }
 
-  async getVehiculosByEstado(ruc: string, estado: string): Promise<VehiculoEnConcesionario[]> {
-    const response = await this.client.get<VehiculoEnConcesionario[]>(`/api/concesionarios/ruc/${ruc}/vehiculos/estado/${estado}`);
+  async getVehiculosByRuc(ruc: string): Promise<VehiculoEnConcesionario[]> {
+    const response = await this.client.get<VehiculoEnConcesionario[]>(`/api/concesionarios/ruc/${ruc}/vehiculos`);
     return response.data;
   }
 }

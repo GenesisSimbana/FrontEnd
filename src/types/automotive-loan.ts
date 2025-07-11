@@ -454,7 +454,7 @@ export interface VehiculoEnConcesionario {
 }
 
 export type CondicionVehiculo = 'NUEVO' | 'USADO';
-export type EstadoVehiculo = 'ACTIVO' | 'INACTIVO';
+export type EstadoVehiculo = 'DISPONIBLE' | 'VENDIDO' | 'NO_DISPONIBLE';
 
 // Identificadores de vehículo
 export interface IdentificadorVehiculo {

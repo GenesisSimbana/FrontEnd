@@ -59,9 +59,13 @@ const CreditSimulationPage: React.FC = () => {
 
   // Cargar vehículos de un concesionario
   const { loading: loadingVehiculos, execute: fetchVehiculos } = useApi(
-    (ruc: string) => concesionarioApiService.getVehiculosByEstado(ruc, 'ACTIVO'),
+    (ruc: string) => concesionarioApiService.getVehiculosByRuc(ruc),
     {
-      onSuccess: (data) => setVehiculos(data),
+      onSuccess: (data) => {
+        // Filtrar solo vehículos disponibles
+        const vehiculosDisponibles = data.filter((vehiculo: VehiculoEnConcesionario) => vehiculo.estado === 'DISPONIBLE');
+        setVehiculos(vehiculosDisponibles);
+      },
     }
   );
 
