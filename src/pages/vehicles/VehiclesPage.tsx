@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import type { VehicleType, VehicleCategory } from '../../types/automotive-loan';

@@ -8,7 +8,6 @@ import { useApi } from '../../hooks/useApi';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import type { 
-  SimulacionCreditoRequestDTO, 
   SimulacionCreditoResponseDTO,
   Concesionario,
   VehiculoEnConcesionario
@@ -27,7 +26,7 @@ type SimulationFormData = z.infer<typeof simulationSchema>;
 const CreditSimulationPage: React.FC = () => {
   const [concesionarios, setConcesionarios] = useState<Concesionario[]>([]);
   const [vehiculos, setVehiculos] = useState<VehiculoEnConcesionario[]>([]);
-  const [selectedConcesionario, setSelectedConcesionario] = useState<Concesionario | null>(null);
+
   const [selectedVehiculo, setSelectedVehiculo] = useState<VehiculoEnConcesionario | null>(null);
   const [simulation, setSimulation] = useState<SimulacionCreditoResponseDTO | null>(null);
   const [activeTab, setActiveTab] = useState<'resumen' | 'conEntrada' | 'sinEntrada' | 'plazoMaximo'>('resumen');
@@ -83,11 +82,8 @@ const CreditSimulationPage: React.FC = () => {
   useEffect(() => {
     if (rucConcesionario) {
       fetchVehiculos(rucConcesionario);
-      const concesionario = concesionarios.find(c => c.ruc === rucConcesionario);
-      setSelectedConcesionario(concesionario || null);
     } else {
       setVehiculos([]);
-      setSelectedConcesionario(null);
     }
   }, [rucConcesionario, concesionarios]);
 
