@@ -20,6 +20,16 @@ class OriginacionService {
     const response = await this.client.post<SimulacionCreditoResponseDTO>('/api/v1/solicitudes/simular', data);
     return response.data;
   }
+
+  async consultarClientePorCedula(cedula: string) {
+    const response = await this.client.get(`/api/v1/clientes/${cedula}`);
+    return response.data;
+  }
+
+  async registrarClienteProspecto(data: any) {
+    const response = await this.client.post('/api/v1/clientes', data);
+    return response.data;
+  }
 }
 
 export const originacionService = new OriginacionService();

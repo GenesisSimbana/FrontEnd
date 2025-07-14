@@ -71,7 +71,7 @@ const CreditSimulationPage: React.FC = () => {
 
   // Simular crédito
   const { loading: simulating, execute: simularCredito } = useApi(
-    originacionService.simularCredito,
+    (data: SimulationFormData) => originacionService.simularCredito(data),
     {
       onSuccess: (data) => setSimulation(data),
       showSuccessToast: true,
@@ -93,7 +93,9 @@ const CreditSimulationPage: React.FC = () => {
 
   useEffect(() => {
     if (placaVehiculo && vehiculos.length > 0) {
-      const vehiculo = vehiculos.find(v => v.placa === placaVehiculo);
+      const vehiculo = vehiculos.find(v => 
+        (v.identificadorVehiculo?.placa || v.placa) === placaVehiculo
+      );
       setSelectedVehiculo(vehiculo || null);
       
       // Establecer el valor del vehículo si está disponible
@@ -106,7 +108,13 @@ const CreditSimulationPage: React.FC = () => {
   }, [placaVehiculo, vehiculos, montoSolicitado]);
 
   const onSubmit = (data: SimulationFormData) => {
-    simularCredito(data);
+    // Usar la placa del identificador del vehículo seleccionado
+    const placaCorrecta = selectedVehiculo?.identificadorVehiculo?.placa || selectedVehiculo?.placa || data.placaVehiculo;
+    const datosLimpios = {
+      ...data,
+      placaVehiculo: placaCorrecta
+    };
+    simularCredito(datosLimpios);
   };
 
   const formatCurrency = (amount: number) => {
@@ -121,6 +129,17 @@ const CreditSimulationPage: React.FC = () => {
     return `${value.toFixed(2)}%`;
   };
 
+  let escenarioActual;
+  if (simulation) {
+    if (activeTab === 'conEntrada') {
+      escenarioActual = simulation.resumenEscenarios.find(esc => esc.nombreEscenario.toLowerCase().includes('entrada'));
+    } else if (activeTab === 'sinEntrada') {
+      escenarioActual = simulation.resumenEscenarios.find(esc => esc.nombreEscenario.toLowerCase().includes('sin entrada'));
+    } else if (activeTab === 'plazoMaximo') {
+      escenarioActual = simulation.resumenEscenarios.find(esc => esc.nombreEscenario.toLowerCase().includes('plazo máximo'));
+    }
+  }
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
@@ -131,7 +150,7 @@ const CreditSimulationPage: React.FC = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="space-y-8">
         {/* Simulation Form */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Datos de la Simulación</h2>
@@ -170,12 +189,15 @@ const CreditSimulationPage: React.FC = () => {
                 disabled={loadingVehiculos || !rucConcesionario}
               >
                 <option value="">Seleccionar vehículo...</option>
-                {vehiculos.map((vehiculo) => (
-                  <option key={vehiculo.placa} value={vehiculo.placa}>
-                    {vehiculo.placa} - {vehiculo.marca} {vehiculo.modelo} {vehiculo.anio}
-                    {vehiculo.valor && ` - ${formatCurrency(vehiculo.valor)}`}
-                  </option>
-                ))}
+                {vehiculos.map((vehiculo) => {
+                  const placa = vehiculo.identificadorVehiculo?.placa || vehiculo.placa;
+                  return (
+                    <option key={placa} value={placa}>
+                      {placa} - {vehiculo.marca} {vehiculo.modelo} {vehiculo.anio}
+                      {vehiculo.valor && ` - ${formatCurrency(vehiculo.valor)}`}
+                    </option>
+                  );
+                })}
               </select>
               {errors.placaVehiculo && (
                 <p className="mt-1 text-sm text-red-600">{errors.placaVehiculo.message}</p>
@@ -188,7 +210,7 @@ const CreditSimulationPage: React.FC = () => {
                 <h3 className="font-medium text-blue-900">Vehículo Seleccionado</h3>
                 <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-blue-700">Placa:</span> {selectedVehiculo.placa}
+                    <span className="text-blue-700">Placa:</span> {selectedVehiculo.identificadorVehiculo?.placa || selectedVehiculo.placa}
                   </div>
                   <div>
                     <span className="text-blue-700">Marca:</span> {selectedVehiculo.marca}
@@ -271,15 +293,10 @@ const CreditSimulationPage: React.FC = () => {
         </div>
 
         {/* Simulation Results */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Resultados de la Simulación</h2>
-          
-          {!simulation ? (
-            <div className="text-center text-gray-500 py-12">
-              <div className="text-6xl mb-4">🧮</div>
-              <p>Complete el formulario para ver los resultados de su simulación</p>
-            </div>
-          ) : (
+        {simulation && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Resultados de la Simulación</h2>
+            
             <div className="space-y-6">
               {/* Tabs */}
               <div className="border-b border-gray-200">
@@ -393,6 +410,40 @@ const CreditSimulationPage: React.FC = () => {
               {/* Tabla de Amortización */}
               {(activeTab === 'conEntrada' || activeTab === 'sinEntrada' || activeTab === 'plazoMaximo') && (
                 <div>
+                  {/* Resumen del escenario correspondiente */}
+                  {escenarioActual && (
+                    <div className="border border-gray-200 rounded-lg p-4 mb-4">
+                      <h4 className="font-medium text-gray-900 mb-2">{escenarioActual.nombreEscenario}</h4>
+                      <p className="text-sm text-gray-600 mb-3">{escenarioActual.descripcion}</p>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">Cuota Mensual:</span>
+                          <div className="font-bold text-blue-600">{formatCurrency(escenarioActual.cuotaMensual)}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Monto Financiado:</span>
+                          <div className="font-medium">{formatCurrency(escenarioActual.montoFinanciado)}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Plazo:</span>
+                          <div className="font-medium">{escenarioActual.plazoMeses} meses</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Total a Pagar:</span>
+                          <div className="font-medium">{formatCurrency(escenarioActual.montoTotal)}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Total Intereses:</span>
+                          <div className="font-medium">{formatCurrency(escenarioActual.totalIntereses)}</div>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Entrada:</span>
+                          <div className="font-medium">{formatCurrency(escenarioActual.entrada)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {/* Tabla de amortización (ya existente) */}
                   <h3 className="font-medium text-gray-900 mb-3">
                     Tabla de Amortización - {
                       activeTab === 'conEntrada' ? 'Con Entrada 20%' :
@@ -414,7 +465,7 @@ const CreditSimulationPage: React.FC = () => {
                       <tbody className="divide-y divide-gray-200">
                         {(activeTab === 'conEntrada' ? simulation.tablaConEntrada20 :
                           activeTab === 'sinEntrada' ? simulation.tablaSinEntrada :
-                          simulation.tablaPlazoMaximo).slice(0, 12).map((cuota) => (
+                          simulation.tablaPlazoMaximo).map((cuota) => (
                           <tr key={cuota.numeroCuota}>
                             <td className="px-3 py-2">{cuota.numeroCuota}</td>
                             <td className="px-3 py-2">{formatCurrency(cuota.saldoInicial)}</td>
@@ -428,27 +479,18 @@ const CreditSimulationPage: React.FC = () => {
                     </table>
                   </div>
                   <p className="text-sm text-gray-500 mt-2">
-                    Mostrando las primeras 12 cuotas de {
+                    Mostrando todas las {
                       activeTab === 'conEntrada' ? simulation.tablaConEntrada20.length :
                       activeTab === 'sinEntrada' ? simulation.tablaSinEntrada.length :
                       simulation.tablaPlazoMaximo.length
-                    } cuotas totales
+                    } cuotas del plan de amortización
                   </p>
                 </div>
               )}
 
-              {/* Actions */}
-              <div className="flex space-x-3 pt-4">
-                <Button variant="secondary" fullWidth>
-                  Descargar PDF
-                </Button>
-                <Button fullWidth>
-                  Aplicar al Crédito
-                </Button>
-              </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
